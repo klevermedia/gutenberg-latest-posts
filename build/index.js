@@ -22,8 +22,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__);
 /* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
 /* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_4__);
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _wordpress_data__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @wordpress/data */ "@wordpress/data");
+/* harmony import */ var _wordpress_data__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_wordpress_data__WEBPACK_IMPORTED_MODULE_5__);
 
 
 
@@ -31,48 +31,63 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const Edit = ({
+  clientId,
   attributes,
   setAttributes
 }) => {
   const blockProps = (0,_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__.useBlockProps)();
+  const dispatch = (0,_wordpress_data__WEBPACK_IMPORTED_MODULE_5__.useDispatch)();
   const {
     post
   } = attributes;
-
-  // Fetch latest posts and store them in state, also store a map of post titles to post IDs
-  const [latestPosts, setLatestPosts] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)([]);
-  const [postTitleToID, setPostTitleToID] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)({});
-  const handleChange = value => {
-    if (value !== '' || value !== null) {
-      // Filter posts that are not in the latest posts to avoid user inputting invalid post title
-      const filter = value.filter(t => latestPosts.includes(t));
-      setAttributes({
-        post: {
-          title: filter,
-          id: postTitleToID[filter]
-        }
+  const getPosts = (0,_wordpress_data__WEBPACK_IMPORTED_MODULE_5__.useSelect)(select => {
+    return select('core').getEntityRecords('postType', 'post', {
+      per_page: -1
+    });
+  });
+  // Define state variables for post titles and IDs
+  const [getPostTitle, setPostTitle] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)([]);
+  const [getPostIDs, setPostIDs] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)([]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useEffect)(() => {
+    if (getPosts) {
+      // Update state variables if posts are fetched
+      const titles = getPosts.map(post => post.title.rendered);
+      const ids = getPosts.map(post => post.id.toString());
+      setPostTitle(titles);
+      setPostIDs(ids);
+    }
+  }, [getPosts]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useEffect)(() => {
+    // Replace innerBlock with a core/paragraph block with the post title and a read more link
+    if (post) {
+      const newBlocks = wp.blocks.createBlock('core/paragraph', {
+        content: `${post.title || 'Select a post...'} <a href="#">Read more<a>`
       });
+      dispatch('core/block-editor').replaceInnerBlocks(clientId, [newBlocks], true);
+    }
+  }, [post, dispatch, clientId]);
+  const handleChange = value => {
+    // Check if the value is not empty
+    if (value !== '' && value !== null) {
+      // Filter posts that are not in the latest posts to avoid user inputting invalid post title
+      const filter = value.filter(t => getPostTitle.includes(t));
+      if (filter.length > 0) {
+        // Get the ID of the first matching post title
+        const id = getPostIDs[getPostTitle.indexOf(filter[0])];
+        setAttributes({
+          post: {
+            title: filter[0],
+            id: id
+          }
+        });
+      } else {
+        // No valid post title was filtered, set post to null
+        setAttributes({
+          post: null
+        });
+      }
     }
   };
-  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useEffect)(() => {
-    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5___default()({
-      path: '/wp/v2/posts'
-    }).then(posts => {
-      const titles = [];
-      const titleToIdMap = {};
-
-      // Loop posts and store titles in an array, also store a map of post titles to post IDs
-      posts.forEach(post => {
-        const title = post.title.rendered;
-        titles.push(title);
-        titleToIdMap[title] = post.id.toString();
-      });
-      setLatestPosts(titles);
-      setPostTitleToID(titleToIdMap);
-    }).catch(error => {
-      console.error('Error fetching posts:', error);
-    });
-  }, []);
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     ...blockProps
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__.InspectorControls, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
@@ -80,11 +95,22 @@ const Edit = ({
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.FormTokenField, {
     label: "Select a post",
     onChange: handleChange,
-    suggestions: latestPosts,
-    value: post ? post.title : null
-  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, "Title: ", post ? post.title : '', ", ID: ", post ? post.id : ''));
+    suggestions: getPostTitle,
+    value: post && post.title ? [post.title] : []
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, "Title: ", post ? post.title : '', ", ID: ", post ? post.id : ''), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__.InnerBlocks, {
+    defaultBlock: ['core/paragraph', {
+      placeholder: "Lorem ipsum..."
+    }],
+    directInsert: true
+  }));
 };
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Edit);
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((0,_wordpress_data__WEBPACK_IMPORTED_MODULE_5__.withSelect)((select, {
+  clientId
+}) => {
+  return {
+    innerBlocks: select('core/block-editor').getBlocks(clientId)
+  };
+})(Edit));
 
 /***/ }),
 
@@ -204,16 +230,6 @@ module.exports = window["React"];
 
 /***/ }),
 
-/***/ "@wordpress/api-fetch":
-/*!**********************************!*\
-  !*** external ["wp","apiFetch"] ***!
-  \**********************************/
-/***/ ((module) => {
-
-module.exports = window["wp"]["apiFetch"];
-
-/***/ }),
-
 /***/ "@wordpress/block-editor":
 /*!*************************************!*\
   !*** external ["wp","blockEditor"] ***!
@@ -244,6 +260,16 @@ module.exports = window["wp"]["components"];
 
 /***/ }),
 
+/***/ "@wordpress/data":
+/*!******************************!*\
+  !*** external ["wp","data"] ***!
+  \******************************/
+/***/ ((module) => {
+
+module.exports = window["wp"]["data"];
+
+/***/ }),
+
 /***/ "@wordpress/element":
 /*!*********************************!*\
   !*** external ["wp","element"] ***!
@@ -270,7 +296,7 @@ module.exports = window["wp"]["i18n"];
   \************************/
 /***/ ((module) => {
 
-module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"lee-recent-posts-block/lee-recent-posts","version":"0.1.0","title":"Recent Posts List","category":"widgets","icon":"editor-ul","description":"Lee\'s Recent Posts List","attributes":{"post":{"type":"object","default":{"id":"","title":""}}},"supports":{"html":false},"textdomain":"lee-recent-posts","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","viewScript":"file:./view.js"}');
+module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"lee-recent-posts-block/lee-recent-posts","version":"0.1.0","title":"Recent Posts List","category":"widgets","icon":"editor-ul","description":"Lee\'s Recent Posts List","attributes":{"post":{"type":"object","default":{"id":null,"title":null}}},"supports":{"html":false},"textdomain":"lee-recent-posts","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","viewScript":"file:./view.js"}');
 
 /***/ })
 

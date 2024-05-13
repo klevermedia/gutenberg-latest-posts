@@ -11,8 +11,8 @@
 		"post" : {
 			"type" : "object",
 			"default" : {
-				"id": "",
-				"title": ""
+				"id": null,
+				"title": null
 			}
 		}
 	},

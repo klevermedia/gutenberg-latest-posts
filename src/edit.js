@@ -1,52 +1,69 @@
-import { __ } from "@wordpress/i18n"
-import { PanelBody, FormTokenField } from '@wordpress/components'
-import { useBlockProps, InspectorControls } from '@wordpress/block-editor'
-import { useState, useEffect } from '@wordpress/element'
-import apiFetch from '@wordpress/api-fetch'
+import { __ } from "@wordpress/i18n";
+import { PanelBody, FormTokenField } from '@wordpress/components';
+import { useBlockProps, InspectorControls, InnerBlocks } from '@wordpress/block-editor';
+import { useState, useEffect } from '@wordpress/element';
+import { useSelect, useDispatch, withSelect } from '@wordpress/data';
 
-const Edit = ({ attributes, setAttributes }) => {
-    const blockProps = useBlockProps()
+const Edit = ({ clientId, attributes, setAttributes }) => {
+    const blockProps = useBlockProps();
+    const dispatch = useDispatch();
 
-    const { post } = attributes
+    const { post } = attributes;
 
-    // Fetch latest posts and store them in state, also store a map of post titles to post IDs
-    const [latestPosts, setLatestPosts] = useState([])
-    const [postTitleToID, setPostTitleToID] = useState({})
-
-    const handleChange = (value) => {
-        if (value !== '' || value !== null) {
-            // Filter posts that are not in the latest posts to avoid user inputting invalid post title
-            const filter = value.filter((t) => latestPosts.includes(t));
-
-            setAttributes({
-                post: {
-                    title: filter,
-                    id: postTitleToID[filter]
-                }
-            })
-        }
-    }
+    const getPosts = useSelect( (select) => { 
+        return select('core').getEntityRecords('postType', 'post', {
+            per_page: -1
+        })
+    });
+    
+    // Define state variables for post titles and IDs
+    const [getPostTitle, setPostTitle] = useState([]);
+    const [getPostIDs, setPostIDs] = useState([]);
 
     useEffect(() => {
-        apiFetch({ path: '/wp/v2/posts' })
-            .then(posts => {
-                const titles = []
-                const titleToIdMap = {}
-                
-                // Loop posts and store titles in an array, also store a map of post titles to post IDs
-                posts.forEach(post => {
-                    const title = post.title.rendered
-                    titles.push(title)
-                    titleToIdMap[title] = post.id.toString()
-                })
-                
-                setLatestPosts(titles)
-                setPostTitleToID(titleToIdMap)
-            })
-            .catch(error => {
-                console.error('Error fetching posts:', error)
-            })
-    }, [])
+        if (getPosts) {
+            // Update state variables if posts are fetched
+            const titles = getPosts.map(post => post.title.rendered);
+            const ids = getPosts.map(post => post.id.toString());
+            setPostTitle(titles);
+            setPostIDs(ids);
+        }
+    }, [getPosts]);
+
+    useEffect(() => {
+        // Replace innerBlock with a core/paragraph block with the post title and a read more link
+        if (post) {
+            const newBlocks = wp.blocks.createBlock('core/paragraph', { content: `${post.title || 'Select a post...'} <a href="#">Read more<a>` });
+            dispatch('core/block-editor').replaceInnerBlocks(clientId, [newBlocks], true);
+        }
+    }, [post, dispatch, clientId]);
+
+    const handleChange = (value) => {
+        
+        // Check if the value is not empty
+        if (value !== '' && value !== null) {
+            
+            // Filter posts that are not in the latest posts to avoid user inputting invalid post title
+            const filter = value.filter((t) => getPostTitle.includes(t));
+
+            if (filter.length > 0) {
+                // Get the ID of the first matching post title
+                const id = getPostIDs[getPostTitle.indexOf(filter[0])];
+
+                setAttributes({
+                    post: {
+                        title: filter[0],
+                        id: id
+                    }
+                });
+            } else {
+                // No valid post title was filtered, set post to null
+                setAttributes({
+                    post: null
+                });
+            }
+        }
+    }
 
     return (
         <div {...blockProps}>
@@ -55,15 +72,20 @@ const Edit = ({ attributes, setAttributes }) => {
                     <FormTokenField
                         label="Select a post"
                         onChange={handleChange}
-                        suggestions={latestPosts}
-                        value={post ? post.title : null}
+                        suggestions={getPostTitle}
+                        value={post && post.title ? [post.title] : []}
                     />
                 </PanelBody>
             </InspectorControls>
 
             <div>Title: {post ? post.title : ''}, ID: {post ? post.id : ''}</div>
+            <InnerBlocks defaultBlock={['core/paragraph', {placeholder: "Lorem ipsum..."}]} directInsert />
         </div>
     )
 }
 
-export default Edit
+export default withSelect((select, { clientId }) => {
+    return {
+        innerBlocks: select('core/block-editor').getBlocks(clientId),
+    };
+})(Edit);
