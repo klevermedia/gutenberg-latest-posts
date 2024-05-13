@@ -45,6 +45,7 @@ const Edit = ({
       per_page: -1
     });
   });
+
   // Define state variables for post titles and IDs
   const [getPostTitle, setPostTitle] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)([]);
   const [getPostIDs, setPostIDs] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)([]);
@@ -61,10 +62,14 @@ const Edit = ({
     // Replace innerBlock with a core/paragraph block with the post title and a read more link
     if (post) {
       const newBlocks = wp.blocks.createBlock('core/paragraph', {
-        content: `${post.title || 'Select a post...'} <a href="#">Read more<a>`
+        content: `<a href="${post.permalink}">Read more</a>`,
+        className: 'dmg-read-more'
       });
       dispatch('core/block-editor').replaceInnerBlocks(clientId, [newBlocks], true);
     }
+
+    // Log the selected post for debugging
+    console.log(post);
   }, [post, dispatch, clientId]);
   const handleChange = value => {
     // Check if the value is not empty
@@ -74,10 +79,12 @@ const Edit = ({
       if (filter.length > 0) {
         // Get the ID of the first matching post title
         const id = getPostIDs[getPostTitle.indexOf(filter[0])];
+        const permalink = getPosts[getPostTitle.indexOf(filter[0])].link;
         setAttributes({
           post: {
             title: filter[0],
-            id: id
+            id: id,
+            permalink: permalink
           }
         });
       } else {
@@ -97,11 +104,11 @@ const Edit = ({
     onChange: handleChange,
     suggestions: getPostTitle,
     value: post && post.title ? [post.title] : []
-  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, "Title: ", post ? post.title : '', ", ID: ", post ? post.id : ''), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__.InnerBlocks, {
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, post && post.title ? post.title : 'Select a post...'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_3__.InnerBlocks, {
     defaultBlock: ['core/paragraph', {
-      placeholder: "Lorem ipsum..."
-    }],
-    directInsert: true
+      placeholder: 'Read more',
+      className: 'dmg-read-more'
+    }]
   }));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((0,_wordpress_data__WEBPACK_IMPORTED_MODULE_5__.withSelect)((select, {
@@ -200,10 +207,18 @@ __webpack_require__.r(__webpack_exports__);
  *
  * @return {Element} Element to render.
  */
-function save() {
-  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-    ..._wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.useBlockProps.save()
-  }, 'Recent Posts List – hello from the saved content!');
+function save({
+  attributes
+}) {
+  const {
+    post
+  } = attributes;
+  if (post && post.title && post.permalink) {
+    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      ..._wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.useBlockProps.save()
+    }, post.title, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("br", null), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.InnerBlocks.Content, null));
+  }
+  return null;
 }
 
 /***/ }),
@@ -296,7 +311,7 @@ module.exports = window["wp"]["i18n"];
   \************************/
 /***/ ((module) => {
 
-module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"lee-recent-posts-block/lee-recent-posts","version":"0.1.0","title":"Recent Posts List","category":"widgets","icon":"editor-ul","description":"Lee\'s Recent Posts List","attributes":{"post":{"type":"object","default":{"id":null,"title":null}}},"supports":{"html":false},"textdomain":"lee-recent-posts","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","viewScript":"file:./view.js"}');
+module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"lee-recent-posts-block/lee-recent-posts","version":"0.1.0","title":"Recent Posts List","category":"widgets","icon":"editor-ul","description":"Lee\'s Recent Posts List","attributes":{"post":{"type":"object","default":{"id":null,"title":null,"permalink":null}}},"supports":{"html":false},"textdomain":"lee-recent-posts","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","viewScript":"file:./view.js"}');
 
 /***/ })
 

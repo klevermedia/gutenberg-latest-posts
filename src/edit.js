@@ -15,7 +15,7 @@ const Edit = ({ clientId, attributes, setAttributes }) => {
             per_page: -1
         })
     });
-    
+
     // Define state variables for post titles and IDs
     const [getPostTitle, setPostTitle] = useState([]);
     const [getPostIDs, setPostIDs] = useState([]);
@@ -25,6 +25,7 @@ const Edit = ({ clientId, attributes, setAttributes }) => {
             // Update state variables if posts are fetched
             const titles = getPosts.map(post => post.title.rendered);
             const ids = getPosts.map(post => post.id.toString());
+            
             setPostTitle(titles);
             setPostIDs(ids);
         }
@@ -33,9 +34,13 @@ const Edit = ({ clientId, attributes, setAttributes }) => {
     useEffect(() => {
         // Replace innerBlock with a core/paragraph block with the post title and a read more link
         if (post) {
-            const newBlocks = wp.blocks.createBlock('core/paragraph', { content: `${post.title || 'Select a post...'} <a href="#">Read more<a>` });
+            const newBlocks = wp.blocks.createBlock('core/paragraph', { content: `<a href="${post.permalink}">Read more</a>`, className: 'dmg-read-more' });
             dispatch('core/block-editor').replaceInnerBlocks(clientId, [newBlocks], true);
         }
+
+        // Log the selected post for debugging
+        console.log(post);
+
     }, [post, dispatch, clientId]);
 
     const handleChange = (value) => {
@@ -49,11 +54,13 @@ const Edit = ({ clientId, attributes, setAttributes }) => {
             if (filter.length > 0) {
                 // Get the ID of the first matching post title
                 const id = getPostIDs[getPostTitle.indexOf(filter[0])];
+                const permalink = getPosts[getPostTitle.indexOf(filter[0])].link;
 
                 setAttributes({
                     post: {
                         title: filter[0],
-                        id: id
+                        id: id,
+                        permalink: permalink
                     }
                 });
             } else {
@@ -78,8 +85,8 @@ const Edit = ({ clientId, attributes, setAttributes }) => {
                 </PanelBody>
             </InspectorControls>
 
-            <div>Title: {post ? post.title : ''}, ID: {post ? post.id : ''}</div>
-            <InnerBlocks defaultBlock={['core/paragraph', {placeholder: "Lorem ipsum..."}]} directInsert />
+            <div>{(post && post.title) ? post.title : 'Select a post...'}</div>
+            <InnerBlocks defaultBlock={['core/paragraph', { placeholder: 'Read more', className: 'dmg-read-more' }]} />
         </div>
     )
 }

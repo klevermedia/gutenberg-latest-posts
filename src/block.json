@@ -12,7 +12,8 @@
 			"type" : "object",
 			"default" : {
 				"id": null,
-				"title": null
+				"title": null,
+				"permalink": null
 			}
 		}
 	},
