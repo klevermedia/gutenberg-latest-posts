@@ -29,3 +29,10 @@ function lee_recent_posts_block_lee_recent_posts_block_init() {
 	register_block_type( __DIR__ . '/build' );
 }
 add_action( 'init', 'lee_recent_posts_block_lee_recent_posts_block_init' );
+
+/**
+ * Include custom WP-CLI command
+ * 
+ * @see https://developer.wordpress.org/cli/commands/
+ */
+require_once plugin_dir_path( __FILE__ ) . 'lee-cli-dmg-read-more.php';
